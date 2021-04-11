@@ -6,21 +6,35 @@ import aiofiles
 import configargparse
 
 logger = logging.getLogger('reader')
+CONNECT_TIMEOUT = 3
+READ_TIMEOUT = 3
+
 
 def make_timestamp():
     return datetime.datetime.now().strftime("%Y.%m.%d %H:%M")
 
 
 async def connect_and_read(host, port, history_file):
-    reader, writer =   await asyncio.open_connection(host, port)
-    async with aiofiles.open(history_file, mode='a') as chat_log_file:
-        while not reader.at_eof():
-            line = await reader.readline()
-            formated_line = f'[{make_timestamp()}] {line.decode()}'
-            logger.debug(repr(formated_line))
+    while True:
+        try:
+            reader, writer = await asyncio.wait_for(
+                asyncio.open_connection(host, port),
+                timeout=CONNECT_TIMEOUT)
 
-            await chat_log_file.write(formated_line)
-            await chat_log_file.flush()
+            async with aiofiles.open(history_file, mode='a') as chat_log_file:
+                while not reader.at_eof():
+                    line = await asyncio.wait_for(
+                        reader.readline(),
+                        timeout=READ_TIMEOUT)
+                    formated_line = f'[{make_timestamp()}] {line.decode()}'
+                    logger.debug(repr(formated_line))
+
+                    await chat_log_file.write(formated_line)
+                    await chat_log_file.flush()
+        except asyncio.CancelledError:
+            break
+        except Exception as ex:
+            logger.error(repr(ex))
 
 
 def main():
