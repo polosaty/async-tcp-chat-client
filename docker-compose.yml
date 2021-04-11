@@ -1,0 +1,18 @@
+version: '2'
+
+services:
+  app:
+    mem_limit: 500M
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    command: python reader.py
+    volumes:
+      - ./:/app
+    ports:
+      - "127.0.0.1:8080:8080"
+    restart: always
+    environment:
+      PORT: 5000
+      HOST: minechat.dvmn.org
+      HISTORY_FILE: chat.log
