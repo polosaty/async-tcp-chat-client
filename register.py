@@ -5,56 +5,53 @@ import os
 
 import configargparse
 
+from utils import closing
+from utils import ProtocolError
+from utils import WrongToken
+
 logger = logging.getLogger('register')
 
 
-class ProtocolError(Exception):
-    pass
-
-
-class WrongToken(ProtocolError):
-    pass
-
-
 async def connect_and_register(host, port, nickname):
-    reader, writer = await asyncio.open_connection(host, port)
+    with closing(await asyncio.open_connection(host, port)) as (reader, writer):
 
-    line = await reader.readline()
-    decoded_line = line.decode()
-    logger.debug('> %r', line)
-    if not decoded_line.startswith(
-            'Hello %username%! Enter your personal hash or leave it empty to create new account.\n'):
-        raise ProtocolError(f'wrong hello message {line!r}')
+        line = await reader.readline()
+        decoded_line = line.decode()
+        logger.debug('> %r', line)
+        if not decoded_line.startswith(
+                'Hello %username%! Enter your personal hash or leave it empty to create new account.\n'):
+            raise ProtocolError(f'wrong hello message {line!r}')
 
-    token_message = f'\n'
-    logger.debug('< %r', token_message)
-    writer.write(token_message.encode())
-    await writer.drain()
+        token_message = '\n'
+        logger.debug('< %r', token_message)
+        writer.write(token_message.encode())
+        await writer.drain()
 
-    line = await reader.readline()
-    decoded_line = line.decode()
-    logger.debug('> %r', line)
-    if not decoded_line.startswith('Enter preferred nickname below:\n'):
-        raise ProtocolError(f'wrong prompt message {line!r}')
+        line = await reader.readline()
+        decoded_line = line.decode()
+        logger.debug('> %r', line)
+        if not decoded_line.startswith('Enter preferred nickname below:\n'):
+            raise ProtocolError(f'wrong prompt message {line!r}')
 
-    register_nickname_message = f'{nickname}\n'
-    logger.debug('< %r', register_nickname_message)
-    writer.write(register_nickname_message.encode())
-    await writer.drain()
+        register_nickname_message = f'{nickname}\n'
+        logger.debug('< %r', register_nickname_message)
+        writer.write(register_nickname_message.encode())
+        await writer.drain()
 
-    line = await reader.readline()
-    decoded_line = line.decode()
-    logger.debug('> %r', line)
-    if not decoded_line.startswith('{') or 'account_hash' not in decoded_line:
-        raise WrongToken(f'cant register {line!r}')
+        line = await reader.readline()
+        decoded_line = line.decode()
+        logger.debug('> %r', line)
+        if not decoded_line.startswith('{') or 'account_hash' not in decoded_line:
+            raise WrongToken(f'cant register {line!r}')
 
-    token_json = json.loads(decoded_line)
-    token = token_json.get('account_hash')
+        token_json = json.loads(decoded_line)
+        token = token_json.get('account_hash')
 
-    if not token:
-        raise WrongToken(f'cant token not found in register answer {token_json!r}')
+        if not token:
+            raise WrongToken(f'token not found in register answer {token_json!r}')
 
-    return token
+        return token
+
 
 def main():
     args = configargparse.ArgParser(default_config_files=['.settings'])

@@ -1,1 +1,5 @@
 chat.log
+.ash_history
+.idea
+.vscode
+__pycache__

@@ -7,8 +7,6 @@ RUN apk --no-cache add zip
 ADD ./requirements.txt /tmp/requirements.txt
 WORKDIR /app
 
-ADD . /app
-
 RUN apk add --virtual .build-deps --no-cache --update cmake make musl-dev gcc g++ gettext-dev libintl git && \
     rm -rf musl-locales && \
     pip3 install -r /tmp/requirements.txt && \
@@ -23,6 +21,11 @@ RUN apk add --virtual .build-deps --no-cache --update cmake make musl-dev gcc g+
     app && \
     chown -R app:app /app
 
+ADD . /app
+
+ENV PORT=5000 \
+    HOST=minechat.dvmn.org \
+    HISTORY_FILE=chat.log
 
 USER app
 EXPOSE 8080
