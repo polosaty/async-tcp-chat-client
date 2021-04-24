@@ -52,7 +52,6 @@ async def connect_and_send(host, port, token, message):
 def main():
     args = configargparse.ArgParser(default_config_files=['.settings'])
     args.add('-c', '--config', required=False, is_config_file=True, help='config file path')
-    # starts with '--' options can be set in a config file
     args.add('--writer_host', required=False, env_var='WRITER_HOST', help='host of server')
     args.add('--writer_port', required=False, env_var='WRITER_PORT', help='port of server')
     args.add('--writer_token', required=False, env_var='TOKEN', help='port of server')

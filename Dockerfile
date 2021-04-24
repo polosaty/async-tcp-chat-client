@@ -28,6 +28,5 @@ ENV PORT=5000 \
     HISTORY_FILE=chat.log
 
 USER app
-EXPOSE 8080
 
 CMD ["python", "reader.py"]
