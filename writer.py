@@ -3,7 +3,7 @@ import logging
 
 import configargparse
 
-from utils import closing
+from utils import open_connection
 from utils import ProtocolError
 from utils import WrongToken
 
@@ -11,7 +11,7 @@ logger = logging.getLogger('sender')
 
 
 async def connect_and_send(host, port, token, message):
-    with closing(await asyncio.open_connection(host, port)) as (reader, writer):
+    async with open_connection(host, port) as (reader, writer):
 
         line = await reader.readline()
         decoded_line = line.decode()
