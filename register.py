@@ -1,3 +1,5 @@
+"""Register new nick name module."""
+
 import asyncio
 import json
 import logging
@@ -13,6 +15,7 @@ logger = logging.getLogger('register')
 
 
 async def connect_and_register(host, port, nickname):
+    """Connect to chat server and try to register nickname."""
     async with open_connection(host, port) as (reader, writer):
 
         line = await reader.readline()
@@ -60,6 +63,7 @@ def main():
     args.add('--writer_host', required=False, env_var='WRITER_HOST', help='host of server')
     args.add('--writer_port', required=False, env_var='WRITER_PORT', help='port of server')
     args.add('--loglevel', required=False, help='log level')
+    """Parse args, run register process and save token."""
     args.add('writer_nickname', help='nickname to register')
 
     options, _ = args.parse_known_args()

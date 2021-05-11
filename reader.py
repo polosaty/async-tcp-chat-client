@@ -1,3 +1,5 @@
+"""Chat reader module."""
+
 import asyncio
 from asyncio.exceptions import TimeoutError
 import datetime
@@ -15,13 +17,14 @@ logger = logging.getLogger('reader')
 
 
 def make_timestamp():
+    """Make formatted current time string."""
     return datetime.datetime.now().strftime("%Y.%m.%d %H:%M")
 
 
-@Backoff.async_retry(exceptions=TimeoutError, max_wait=60, jitter=1, logger=logger,
+@Backoff.async_retry(exception=TimeoutError, max_wait=60, jitter=1, logger=logger,
                      min_time_for_reset=max(CONNECT_TIMEOUT, READ_TIMEOUT) + 1)
 async def connect_and_read(host, port, history_file):
-
+    """Connect to chat server, read and save all messages to history_file."""
     async with open_connection(host, port) as (reader, _):
 
         async with aiofiles.open(history_file, mode='a') as chat_log_file:
@@ -45,6 +48,7 @@ def main():
     args.add('--loglevel', required=False, help='log level')
     args.add('--history', required=False, env_var='HISTORY_FILE', help='history file path')
     options, _ = args.parse_known_args()
+    """Parse args and run reader."""
 
     if options.loglevel:
         logging.basicConfig(level=options.loglevel)

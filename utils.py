@@ -1,19 +1,20 @@
+"""Shared utils module."""
+
 import asyncio
 from contextlib import asynccontextmanager
 import logging
 import random
 import time
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 from consts import CONNECT_TIMEOUT
 
 
 class Backoff:
-    """
-    Exponential backoff with jitter
-    """
+    """Exponential backoff with jitter."""
 
     def __init__(self, base=2, factor=1, max_wait=None, jitter=None, min_time_for_reset=None, logger=None):
+        """Initiate backoff parameters."""
         self.base = base
         self.factor = factor
         self.max_wait = max_wait
@@ -23,16 +24,22 @@ class Backoff:
         self.logger = logger or logging.getLogger('backoff')
 
     def reset(self):
+        """Reset retry counter."""
         self._retries = 0
 
     def add_jitter(self, wait_time):
+        """Add jitter to time.
+
+        wait_time ± random(0..self._jitter/2)
+        """
         if self._jitter is None:
             return wait_time
 
-        jitter = max(wait_time / 2, self._jitter)
+        jitter = min(wait_time / 2, self._jitter)
         return wait_time + random.random() * jitter - jitter / 2
 
     def get_wait_time(self):
+        """Calculate wait time as function of self._retries."""
         wait_time = self.factor * self.base ** self._retries
         if self.max_wait is None or wait_time > self.max_wait:
             wait_time = self.max_wait
@@ -40,14 +47,16 @@ class Backoff:
         return self.add_jitter(wait_time)
 
     async def sleep(self):
+        """Asynchronous sleep."""
         wait_time = self.get_wait_time()
         self._retries += 1
         self.logger.debug('backoff %s seconds', wait_time)
         await asyncio.sleep(wait_time)
 
     @classmethod
-    def async_retry(cls, exceptions=Exception,
+    def async_retry(cls, exception=Union[Exception, Tuple[Exception]],
                     base=2, factor=1, max_wait=None, jitter=None, min_time_for_reset=None, logger=None):
+        """Make decorator to retry with backoff."""
         def wrapper(func):
             async def wrapped(*args, **kwargs):
                 backoff_waiter = cls(base=base,
@@ -60,7 +69,7 @@ class Backoff:
                     start_time = time.time()
                     try:
                         return await func(*args, **kwargs)
-                    except exceptions:
+                    except exception:
                         run_time = time.time() - start_time
 
                         if backoff_waiter.min_time_for_reset and run_time > backoff_waiter.min_time_for_reset:
@@ -73,9 +82,9 @@ class Backoff:
 
 
 @asynccontextmanager
-async def open_connection(host: str, port: int, connect_timeout=CONNECT_TIMEOUT) -> Tuple[asyncio.StreamReader,
-                                                                                          asyncio.StreamWriter]:
-
+async def open_connection(host: str, port: int,
+                          connect_timeout=CONNECT_TIMEOUT) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+    """Make connection and close it after __aexit__."""
     writer: Optional[asyncio.StreamWriter] = None
     try:
         reader: asyncio.StreamReader
@@ -90,8 +99,8 @@ async def open_connection(host: str, port: int, connect_timeout=CONNECT_TIMEOUT)
 
 
 class ProtocolError(Exception):
-    pass
+    """Exception for protocol problems."""
 
 
 class WrongToken(ProtocolError):
-    pass
+    """Exception for protocol problems with token."""

@@ -1,6 +1,6 @@
 loglevel = DEBUG
-host = minechat.dvmn.org
-port = 5000
+read_host = minechat.dvmn.org
+read_port = 5000
 history = chat.log
-writer_host = minechat.dvmn.org
-writer_port = 5050
+write_host = minechat.dvmn.org
+write_port = 5050

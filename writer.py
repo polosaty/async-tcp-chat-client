@@ -1,3 +1,5 @@
+"""Chat message writer module."""
+
 import asyncio
 import logging
 
@@ -11,6 +13,7 @@ logger = logging.getLogger('sender')
 
 
 async def connect_and_send(host, port, token, message):
+    """Connect to chat server, login and send message."""
     async with open_connection(host, port) as (reader, writer):
 
         line = await reader.readline()
@@ -39,6 +42,7 @@ async def connect_and_send(host, port, token, message):
 
         logger.debug('< %r', message)
         writer.write(f'{message}\n\n'.encode())
+        await writer.drain()
 
         line = await reader.readline()
         logger.debug('> %r', line)
@@ -55,6 +59,7 @@ def main():
     args.add('--writer_host', required=False, env_var='WRITER_HOST', help='host of server')
     args.add('--writer_port', required=False, env_var='WRITER_PORT', help='port of server')
     args.add('--writer_token', required=False, env_var='TOKEN', help='port of server')
+    """Parse args and run send message process."""
     args.add('--message', required=True, help='message for chat')
     args.add('--loglevel', required=False, help='log level')
 
