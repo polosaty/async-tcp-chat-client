@@ -54,16 +54,19 @@ async def connect_and_send(host, port, token, message):
 
 
 def main():
-    args = configargparse.ArgParser(default_config_files=['.settings'])
-    args.add('-c', '--config', required=False, is_config_file=True, help='config file path')
-    args.add('--writer_host', required=False, env_var='WRITER_HOST', help='host of server')
-    args.add('--writer_port', required=False, env_var='WRITER_PORT', help='port of server')
-    args.add('--writer_token', required=False, env_var='TOKEN', help='port of server')
     """Parse args and run send message process."""
+    args = configargparse.ArgParser(
+        prog='writer.py',
+        ignore_unknown_config_file_keys=True,
+        default_config_files=['.settings'])
+    args.add('-c', '--config', is_config_file=True, help='config file path')
+    args.add('--write_host', env_var='WRITE_HOST', help='host of server to write')
+    args.add('--write_port', env_var='WRITE_PORT', help='port of server to write')
+    args.add('--write_token', env_var='TOKEN', help='port of server')
     args.add('--message', required=True, help='message for chat')
-    args.add('--loglevel', required=False, help='log level')
+    args.add('--loglevel', help='log level')
 
-    options, _ = args.parse_known_args()
+    options = args.parse_args()
     if options.loglevel:
         logging.basicConfig(level=options.loglevel)
         logger.setLevel(options.loglevel)
@@ -72,9 +75,9 @@ def main():
 
     asyncio.run(
         connect_and_send(
-            options.writer_host,
-            options.writer_port,
-            options.writer_token,
+            options.write_host,
+            options.write_port,
+            options.write_token,
             options.message))
 
 

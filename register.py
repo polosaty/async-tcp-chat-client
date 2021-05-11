@@ -3,7 +3,6 @@
 import asyncio
 import json
 import logging
-import os
 
 import configargparse
 
@@ -57,16 +56,17 @@ async def connect_and_register(host, port, nickname):
 
 
 def main():
-    args = configargparse.ArgParser(default_config_files=['.settings'])
-    args.add('-c', '--config', required=False, is_config_file=True, help='config file path')
-    # starts with '--' options can be set in a config file
-    args.add('--writer_host', required=False, env_var='WRITER_HOST', help='host of server')
-    args.add('--writer_port', required=False, env_var='WRITER_PORT', help='port of server')
-    args.add('--loglevel', required=False, help='log level')
     """Parse args, run register process and save token."""
+    args = configargparse.ArgParser(prog='register.py',
+                                    ignore_unknown_config_file_keys=True,
+                                    default_config_files=['.settings'])
+    args.add('-c', '--config', is_config_file=True, help='config file path')
+    args.add('--write_host', env_var='WRITE_HOST', help='host of server to write')
+    args.add('--write_port', env_var='WRITE_PORT', help='port of server to write')
+    args.add('--loglevel', help='log level')
     args.add('writer_nickname', help='nickname to register')
 
-    options, _ = args.parse_known_args()
+    options = args.parse_args()
 
     if options.loglevel:
         logging.basicConfig(level=options.loglevel)
@@ -76,21 +76,19 @@ def main():
 
     token = asyncio.run(
         connect_and_register(
-            options.writer_host,
-            options.writer_port,
+            options.write_host,
+            options.write_port,
             options.writer_nickname,
         ))
 
-    # сохраняем writer_token в конфиг для отправки сообщений из под зарегистриованного пользователя
-    # для этого сохраняем его в переменные окружения, чтобы ArgParser его "увидел"
-    # если есть другой способ, без использования "private" свойств ArgParser - сообщите мне
-    os.environ['TOKEN'] = token
-    # добавляем параметр writer_token в known_args
-    args.add('--writer_token', required=False, env_var='TOKEN', help='token of server')
+    # создаем отдельный парсер без ignore_unknown_config_file_keys, чтобы не испортить конфиг
+    config_saver = configargparse.ArgParser(default_config_files=['.settings'])
+    # добавляем параметр write_token в known_args
+    config_saver.add('--write_token', required=True, env_var='TOKEN')
     # и перечитывем TOKEN из переменных окружения
-    options, _ = args.parse_known_args()
+    options, _ = config_saver.parse_known_args(env_vars={'TOKEN': token})
     # сохраняем конфиг с writer_token
-    args.write_config_file(options, ['.settings'], exit_after=False)
+    config_saver.write_config_file(options, ['.settings'], exit_after=False)
     logger.debug('exiting')
 
 

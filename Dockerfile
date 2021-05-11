@@ -23,8 +23,8 @@ RUN apk add --virtual .build-deps --no-cache --update cmake make musl-dev gcc g+
 
 ADD . /app
 
-ENV PORT=5000 \
-    HOST=minechat.dvmn.org \
+ENV READ_PORT=5000 \
+    READ_HOST=minechat.dvmn.org \
     HISTORY_FILE=chat.log
 
 USER app
