@@ -1,6 +1,7 @@
 """Chat message writer module."""
 
 import asyncio
+import json
 import logging
 
 import configargparse
@@ -12,45 +13,59 @@ from utils import WrongToken
 logger = logging.getLogger('sender')
 
 
+async def login(token, reader, writer):
+    """Login to chat with token."""
+
+    line = await reader.readline()
+    decoded_line = line.decode()
+    logger.debug('> %r', line)
+    if not decoded_line.startswith(
+            'Hello %username%! Enter your personal hash or leave it empty to create new account.\n'):
+        raise ProtocolError(f'wrong hello message {line!r}')
+
+    token_message = f'{token}\n'
+    logger.debug('< %r', token_message)
+    writer.write(token_message.encode())
+    await writer.drain()
+
+    line = await reader.readline()
+    login_response_json = line.decode()
+    logger.debug('> %r', line)
+    if not login_response_json.startswith('{') or token not in login_response_json:
+        raise WrongToken(f'cant login {line!r}')
+
+    login_response = json.loads(login_response_json)
+
+    line = await reader.readline()
+    decoded_line = line.decode()
+    logger.debug('> %r', decoded_line)
+    if not decoded_line.startswith('Welcome to chat! Post your message below. End it with an empty line.\n'):
+        raise ProtocolError(f'wrong welcome message {line!r}')
+
+    return login_response
+
+
+async def send_message(message, reader, writer):
+    logger.debug('< %r', message)
+    writer.write(f'{message}\n\n'.encode())
+    await writer.drain()
+
+    line = await reader.readline()
+    logger.debug('> %r', line)
+    if not line.decode().startswith(
+            'Message send. Write more, end message with an empty line.\n'):
+        raise ProtocolError(f'wrong confirm message {line!r}')
+
+    logger.debug(f'message <{message}> sent')
+
+
 async def connect_and_send(host, port, token, message):
     """Connect to chat server, login and send message."""
     async with open_connection(host, port) as (reader, writer):
 
-        line = await reader.readline()
-        decoded_line = line.decode()
-        logger.debug('> %r', line)
-        if not decoded_line.startswith(
-                'Hello %username%! Enter your personal hash or leave it empty to create new account.\n'):
-            raise ProtocolError(f'wrong hello message {line!r}')
+        await login(token, reader, writer)
+        await send_message(message, reader, writer)
 
-        token_message = f'{token}\n'
-        logger.debug('< %r', token_message)
-        writer.write(token_message.encode())
-        await writer.drain()
-
-        line = await reader.readline()
-        decoded_line = line.decode()
-        logger.debug('> %r', line)
-        if not decoded_line.startswith('{') or token not in decoded_line:
-            raise WrongToken(f'cant login {line!r}')
-
-        line = await reader.readline()
-        decoded_line = line.decode()
-        logger.debug('> %r', decoded_line)
-        if not decoded_line.startswith('Welcome to chat! Post your message below. End it with an empty line.\n'):
-            raise ProtocolError(f'wrong welcome message {line!r}')
-
-        logger.debug('< %r', message)
-        writer.write(f'{message}\n\n'.encode())
-        await writer.drain()
-
-        line = await reader.readline()
-        logger.debug('> %r', line)
-        if not line.decode().startswith(
-                'Message send. Write more, end message with an empty line.\n'):
-            raise ProtocolError(f'wrong confirm message {line!r}')
-
-        logger.debug(f'message <{message}> sent')
 
 
 def main():

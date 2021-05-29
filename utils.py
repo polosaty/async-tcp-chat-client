@@ -7,6 +7,8 @@ import random
 import time
 from typing import Optional, Tuple, Union
 
+from async_timeout import timeout
+
 from consts import CONNECT_TIMEOUT
 
 
@@ -81,21 +83,39 @@ class Backoff:
         return wrapper
 
 
+def call_if_callable(func):
+    if callable(func):
+        try:
+            func()
+        except Exception as ex:
+            logging.warning('%r raised exception %r', func, ex)
+
+
 @asynccontextmanager
-async def open_connection(host: str, port: int,
-                          connect_timeout=CONNECT_TIMEOUT) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+async def open_connection(
+        host: str, port: int,
+        connect_timeout=CONNECT_TIMEOUT,
+        on_connecting=None,
+        on_connected=None,
+        on_closed=None) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
     """Make connection and close it after __aexit__."""
+    call_if_callable(on_connecting)
+
     writer: Optional[asyncio.StreamWriter] = None
     try:
-        reader: asyncio.StreamReader
-        reader, writer = await asyncio.wait_for(
-            asyncio.open_connection(host, port),
-            timeout=connect_timeout)
+        async with timeout(connect_timeout):
+            reader: asyncio.StreamReader
+            reader, writer = await asyncio.open_connection(host, port)
+
+        call_if_callable(on_connected)
+
         yield reader, writer
     finally:
         if writer:
             writer.close()
             await writer.wait_closed()
+
+        call_if_callable(on_closed)
 
 
 class ProtocolError(Exception):

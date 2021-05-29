@@ -6,6 +6,7 @@ import datetime
 import logging
 
 import aiofiles
+from async_timeout import timeout
 import configargparse
 
 from consts import CONNECT_TIMEOUT
@@ -29,13 +30,13 @@ async def connect_and_read(host, port, history_file):
 
         async with aiofiles.open(history_file, mode='a') as chat_log_file:
             while not reader.at_eof():
-                line = await asyncio.wait_for(
-                    reader.readline(),
-                    timeout=READ_TIMEOUT)
-                formated_line = f'[{make_timestamp()}] {line.decode()}'
-                logger.debug(repr(formated_line))
+                async with timeout(READ_TIMEOUT):
+                    line = await reader.readline()
 
-                await chat_log_file.write(formated_line)
+                formatted_line = f'[{make_timestamp()}] {line.decode()}'
+                logger.debug(repr(formatted_line))
+
+                await chat_log_file.write(formatted_line)
                 await chat_log_file.flush()
 
 

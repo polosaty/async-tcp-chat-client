@@ -2,7 +2,7 @@ FROM python:3.9-alpine3.13
 
 ARG UID=1000
 
-RUN apk --no-cache add zip
+RUN apk --no-cache add zip tk terminus-font
 
 ADD ./requirements.txt /tmp/requirements.txt
 WORKDIR /app
