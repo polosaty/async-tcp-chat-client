@@ -55,6 +55,17 @@ async def connect_and_register(host, port, nickname):
         return token
 
 
+def save_token(token):
+    # создаем отдельный парсер без ignore_unknown_config_file_keys, чтобы не испортить конфиг
+    config_saver = configargparse.ArgParser(default_config_files=['.settings'])
+    # добавляем параметр write_token в known_args
+    config_saver.add('--write_token', required=True, env_var='TOKEN')
+    # и перечитывем TOKEN из переменных окружения
+    options, _ = config_saver.parse_known_args(env_vars={'TOKEN': token})
+    # сохраняем конфиг с writer_token
+    config_saver.write_config_file(options, ['.settings'], exit_after=False)
+
+
 def main():
     """Parse args, run register process and save token."""
     args = configargparse.ArgParser(prog='register.py',
@@ -81,14 +92,7 @@ def main():
             options.writer_nickname,
         ))
 
-    # создаем отдельный парсер без ignore_unknown_config_file_keys, чтобы не испортить конфиг
-    config_saver = configargparse.ArgParser(default_config_files=['.settings'])
-    # добавляем параметр write_token в known_args
-    config_saver.add('--write_token', required=True, env_var='TOKEN')
-    # и перечитывем TOKEN из переменных окружения
-    options, _ = config_saver.parse_known_args(env_vars={'TOKEN': token})
-    # сохраняем конфиг с writer_token
-    config_saver.write_config_file(options, ['.settings'], exit_after=False)
+    save_token(token)
     logger.debug('exiting')
 
 

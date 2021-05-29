@@ -24,3 +24,16 @@ services:
       - ./:/app
       - /tmp/.X11-unix:/tmp/.X11-unix
     network_mode: host
+
+  register-gui:
+    image: *app
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    command: python register_gui.py
+    environment:
+      - DISPLAY=${DISPLAY}
+    volumes:
+      - ./:/app
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    network_mode: host
