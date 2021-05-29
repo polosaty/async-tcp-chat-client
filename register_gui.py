@@ -1,3 +1,5 @@
+"""Chat registration gui application."""
+
 import asyncio
 import logging
 from tkinter import messagebox
@@ -16,6 +18,12 @@ logger = logging.getLogger('register-gui')
 
 
 async def register_nickname_and_exit(write_host, write_port, events_queue):
+    """
+    Receive writer_nickname from events_queue and register it on chat server.
+
+    After registration shows message box about token saving.
+    And close application.
+    """
     writer_nickname = await events_queue.get()
     token = await connect_and_register(
         write_host,
@@ -29,13 +37,14 @@ async def register_nickname_and_exit(write_host, write_port, events_queue):
 
 
 def process_nickname(input_field, events_queue):
+    """Take text from input box and put it to queue."""
     text = input_field.get()
     events_queue.put_nowait(text)
     input_field.delete(0, tk.END)
 
 
 async def draw_register_gui(events_queue: asyncio.Queue):
-
+    """Render application gui."""
     root = tk.Tk()
 
     root.title('Регистрация нового пользователя')
@@ -64,7 +73,7 @@ async def draw_register_gui(events_queue: asyncio.Queue):
 
 
 async def main(write_host, write_port):
-
+    """Init and start chat registration gui application."""
     events_queue = asyncio.Queue()
     async with anyio.create_task_group() as tg:
         tg.start_soon(draw_register_gui, events_queue)

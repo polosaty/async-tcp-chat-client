@@ -1,5 +1,6 @@
+"""Gui application chat reader/writer."""
+
 import asyncio
-from asyncio.exceptions import CancelledError
 from asyncio.exceptions import TimeoutError
 from contextlib import asynccontextmanager
 import json
@@ -12,6 +13,7 @@ from typing import Optional, Tuple, Type, Union
 import aiofiles
 import aiofiles.os
 import anyio
+from anyio import ExceptionGroup
 import anyio.abc
 from async_timeout import timeout
 import configargparse
@@ -29,14 +31,11 @@ logger = logging.getLogger('app')
 watchdog_logger = logging.getLogger('watchdog')
 
 
-@Backoff.async_retry(exception=(TimeoutError, CancelledError), max_wait=60, jitter=1, logger=logger,
-                     min_time_for_reset=max(CONNECT_TIMEOUT, READ_TIMEOUT) + 1)
 async def read_msgs(host: str, port: int,
                     status_updates_queue: asyncio.Queue,
                     watchdog_queue: asyncio.Queue,
                     *out_queues: asyncio.Queue):
     """Connect to chat server, read and save all messages to history_file and queue."""
-
     async with open_connection_with_status(
             host, port,
             status_updates_queue=status_updates_queue,
@@ -57,6 +56,7 @@ async def read_msgs(host: str, port: int,
 
 
 async def save_messages(filepath: str, queue: asyncio.Queue):
+    """Save messages from queue to file filepath."""
     async with aiofiles.open(filepath, mode='a') as chat_log_file:
         while True:
             message = await queue.get()
@@ -69,6 +69,10 @@ async def save_messages(filepath: str, queue: asyncio.Queue):
 
 
 async def authorize_writer(token, reader, writer, status_updates_queue, watchdog_queue):
+    """Proceed login dialog on server over reader, writer.
+
+    And report statuses to status_updates_queue and watchdog_queue.
+    """
     line = await reader.readline()
     decoded_line = line.decode()
     logger.debug('> %r', line)
@@ -115,10 +119,11 @@ async def open_connection_with_status(
         connection_status_enum: ConnectionStatusEnum,
         connect_timeout=CONNECT_TIMEOUT,
 ) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
-    """Make connection and close it after __aexit__.
-        And report status to status_updates_queue.
     """
+    Make connection and close it after __aexit__.
 
+    And report status to status_updates_queue.
+    """
     status_updates_queue.put_nowait(connection_status_enum.INITIATED)
 
     writer: Optional[asyncio.StreamWriter] = None
@@ -138,14 +143,16 @@ async def open_connection_with_status(
         status_updates_queue.put_nowait(connection_status_enum.CLOSED)
 
 
-@Backoff.async_retry(exception=(TimeoutError, CancelledError), max_wait=60, jitter=1, logger=logger,
-                     min_time_for_reset=CONNECT_TIMEOUT + 1)
 async def send_msgs(
         host: str, port: int, token: str,
         sending_queue: asyncio.Queue,
         status_updates_queue: asyncio.Queue,
         watchdog_queue: asyncio.Queue):
+    """
+    Establish connection to writing server and send messages from sending_queue.
 
+    Send status updates to status_updates_queue and activity to watchdog_queue.
+    """
     async with open_connection_with_status(
             host, port,
             connection_status_enum=gui.SendingConnectionStateChanged,
@@ -170,8 +177,7 @@ async def send_msgs(
 
 
 async def load_history(filepath: str, queue: asyncio.Queue, tail_size=10240):
-    """Загружает "хвост" файла в очередь."""
-
+    """Load tail of file filepath to queue."""
     async with aiofiles.open(filepath, mode='r') as chat_log_file:
         file_size = (await aiofiles.os.stat(filepath)).st_size
         if file_size > tail_size:
@@ -193,6 +199,7 @@ async def load_history(filepath: str, queue: asyncio.Queue, tail_size=10240):
 
 
 async def watch_for_connection(watchdog_queue):
+    """Watch for connections by listening watchdog_queue."""
     while True:
         message = None
         try:
@@ -207,9 +214,10 @@ async def watch_for_connection(watchdog_queue):
             watchdog_logger.debug('[%d] Connection is alive. Source: %r', time.time(), message)
 
 
-@Backoff.async_retry(exception=(ConnectionError, TimeoutError), max_wait=60, jitter=1, logger=logger,
-                     min_time_for_reset=CONNECT_TIMEOUT + 1)
+@Backoff.async_retry(exception=(ConnectionError, TimeoutError, ExceptionGroup),
+                     max_wait=60, jitter=1, logger=logger, min_time_for_reset=CONNECT_TIMEOUT + 1)
 async def handle_connection(*coroutines):
+    """Handle connection problems."""
     tg: anyio.abc.TaskGroup
     async with anyio.create_task_group() as tg:
         for coroutine in coroutines:
@@ -217,6 +225,7 @@ async def handle_connection(*coroutines):
 
 
 async def main(options):
+    """Init and start gui application chat reader/writer."""
     messages_queue = asyncio.Queue()
     messages_log_queue = asyncio.Queue()
     sending_queue = asyncio.Queue()
@@ -264,7 +273,6 @@ if __name__ == '__main__':
 
     try:
         loop.run_until_complete(main(options))
-        # loop.run_until_complete(gui.draw_register_gui())
     except utils.WrongToken:
         messagebox.showerror('Неверный токен', 'Проверьте токен, сервер его не узнал.')
     except (gui.TkAppClosed, KeyboardInterrupt):

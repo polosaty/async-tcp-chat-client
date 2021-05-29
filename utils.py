@@ -84,6 +84,7 @@ class Backoff:
 
 
 def call_if_callable(func):
+    """Check if func is callable and run it with exception handling."""
     if callable(func):
         try:
             func()

@@ -15,7 +15,6 @@ logger = logging.getLogger('sender')
 
 async def login(token, reader, writer):
     """Login to chat with token."""
-
     line = await reader.readline()
     decoded_line = line.decode()
     logger.debug('> %r', line)
@@ -46,6 +45,7 @@ async def login(token, reader, writer):
 
 
 async def send_message(message, reader, writer):
+    """Send message to server by reader, writer."""
     logger.debug('< %r', message)
     writer.write(f'{message}\n\n'.encode())
     await writer.drain()
@@ -65,7 +65,6 @@ async def connect_and_send(host, port, token, message):
 
         await login(token, reader, writer)
         await send_message(message, reader, writer)
-
 
 
 def main():

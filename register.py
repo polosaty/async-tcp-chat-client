@@ -56,6 +56,7 @@ async def connect_and_register(host, port, nickname):
 
 
 def save_token(token):
+    """Save token to config file."""
     # создаем отдельный парсер без ignore_unknown_config_file_keys, чтобы не испортить конфиг
     config_saver = configargparse.ArgParser(default_config_files=['.settings'])
     # добавляем параметр write_token в known_args
