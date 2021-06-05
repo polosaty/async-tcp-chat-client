@@ -72,7 +72,7 @@ def main():
     args = configargparse.ArgParser(
         prog='writer.py',
         ignore_unknown_config_file_keys=True,
-        default_config_files=['.settings'])
+        default_config_files=['.settings', '.token'])
     args.add('-c', '--config', is_config_file=True, help='config file path')
     args.add('--write_host', env_var='WRITE_HOST', help='host of server to write')
     args.add('--write_port', env_var='WRITE_PORT', help='port of server to write')

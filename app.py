@@ -2,6 +2,7 @@
 
 import asyncio
 from asyncio.exceptions import TimeoutError
+import contextlib
 from contextlib import asynccontextmanager
 import json
 import logging
@@ -253,7 +254,7 @@ if __name__ == '__main__':
     args = configargparse.ArgParser(
         prog='app.py',
         ignore_unknown_config_file_keys=True,
-        default_config_files=['.settings']
+        default_config_files=['.settings', '.token']
     )
     args.add('-c', '--config', is_config_file=True, help='config file path')
     args.add('--read_host', env_var='READ_HOST', help='host of server to read')
@@ -271,9 +272,8 @@ if __name__ == '__main__':
         watchdog_logger.setLevel(options.loglevel)
     loop = asyncio.get_event_loop()
 
-    try:
-        loop.run_until_complete(main(options))
-    except utils.WrongToken:
-        messagebox.showerror('Неверный токен', 'Проверьте токен, сервер его не узнал.')
-    except (gui.TkAppClosed, KeyboardInterrupt):
-        pass
+    with contextlib.suppress(gui.TkAppClosed, KeyboardInterrupt):
+        try:
+            asyncio.run(main(options))
+        except utils.WrongToken:
+            messagebox.showerror('Неверный токен', 'Проверьте токен, сервер его не узнал.')

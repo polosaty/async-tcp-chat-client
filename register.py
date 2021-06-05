@@ -58,13 +58,13 @@ async def connect_and_register(host, port, nickname):
 def save_token(token):
     """Save token to config file."""
     # создаем отдельный парсер без ignore_unknown_config_file_keys, чтобы не испортить конфиг
-    config_saver = configargparse.ArgParser(default_config_files=['.settings'])
+    config_saver = configargparse.ArgParser(default_config_files=['.token'])
     # добавляем параметр write_token в known_args
     config_saver.add('--write_token', required=True, env_var='TOKEN')
     # и перечитывем TOKEN из переменных окружения
     options, _ = config_saver.parse_known_args(env_vars={'TOKEN': token})
     # сохраняем конфиг с writer_token
-    config_saver.write_config_file(options, ['.settings'], exit_after=False)
+    config_saver.write_config_file(options, ['.token'], exit_after=False)
 
 
 def main():

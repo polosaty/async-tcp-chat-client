@@ -3,3 +3,4 @@ chat.log
 .idea
 .vscode
 __pycache__
+.token

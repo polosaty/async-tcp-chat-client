@@ -1,6 +1,7 @@
 """Chat registration gui application."""
 
 import asyncio
+import contextlib
 import logging
 from tkinter import messagebox
 import tkinter as tk
@@ -68,8 +69,7 @@ async def draw_register_gui(events_queue: asyncio.Queue):
     label = tk.Label(root_frame, text="Введите имя пользователя", width=15, height=3)
     label.pack(side="top", fill=tk.BOTH, expand=True)
 
-    async with anyio.create_task_group() as tg:
-        tg.start_soon(update_tk, root_frame)
+    await update_tk(root_frame)
 
 
 async def main(write_host, write_port):
@@ -95,11 +95,9 @@ if __name__ == '__main__':
     if options.loglevel:
         logging.basicConfig(level=options.loglevel)
         logger.setLevel(options.loglevel)
-    loop = asyncio.get_event_loop()
 
-    try:
-        loop.run_until_complete(main(options.write_host, options.write_port))
-    except (utils.WrongToken, utils.ProtocolError) as ex:
-        messagebox.showerror('Проблема', f'Регистрация завершилась с ошибкой: {ex!r}.')
-    except (gui.TkAppClosed, KeyboardInterrupt):
-        pass
+    with contextlib.suppress(gui.TkAppClosed, KeyboardInterrupt):
+        try:
+            asyncio.run(main(options.write_host, options.write_port))
+        except (utils.WrongToken, utils.ProtocolError) as ex:
+            messagebox.showerror('Проблема', f'Регистрация завершилась с ошибкой: {ex!r}.')
